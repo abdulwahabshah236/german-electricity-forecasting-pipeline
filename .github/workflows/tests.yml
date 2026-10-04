@@ -1,0 +1,36 @@
+name: Tests
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: python -m pip install -e ".[test]"
+      - run: python -m pytest tests/test_parsing.py tests/test_modeling.py -q
+      - run: python scripts/build_cleaned_notebook.py && python scripts/build_workflow.py
+      - run: git diff --exit-code -- notebooks databricks.yml
+  spark:
+    runs-on: ubuntu-latest
+    env:
+      TZ: UTC
+      SPARK_LOCAL_IP: 127.0.0.1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: python -m pip install -e ".[local,test]"
+      - run: python -m pytest tests/test_engineering.py -q
